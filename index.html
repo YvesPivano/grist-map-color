@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Carte Grist Colorée</title>
+  <!-- 1. Charger le style de la carte (Leaflet) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { height: 100vh; width: 100%; }
+  </style>
+</head>
+<body>
+
+  <!-- 2. Le conteneur de la carte -->
+  <div id="map"></div>
+
+  <!-- 3. Charger le script de la carte (Leaflet) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- 4. Votre logique personnalisée -->
+  <script>
+    // --- CONFIGURATION DE LA CARTE ---
+    // Coordonnées centrales (ex: France) et zoom
+    var map = L.map('map').setView([46.603354, 1.888334], 6);
+    
+    // Fond de carte (OpenStreetMap)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Groupe pour gérer les marqueurs (permet de les effacer avant de redessiner)
+    var markersLayer = L.layerGroup().addTo(map);
+
+    // --- CONFIGURATION DES COULEURS ---
+    // Modifiez cette fonction pour changer les couleurs selon vos besoins
+    function getColor(statut) {
+      switch (statut) {
+        case 'Validé': return '#2ecc71'; // Vert
+        case 'En cours': return '#f1c40f'; // Jaune
+        case 'Problème': return '#e74c3c'; // Rouge
+        default: return '#3498db'; // Bleu par défaut
+      }
+    }
+
+    // --- CONNEXION A GRIST ---
+    // Indique à Grist que le widget est prêt
+    if (typeof grist !== 'undefined') {
+      grist.ready();
+
+      // Écoute les changements de données dans la table liée
+      grist.onRecords((records) => {
+        // 1. Vider les anciens points
+        markersLayer.clearLayers();
+
+        // 2. Boucler sur chaque ligne de Grist
+        records.forEach(row => {
+          // Vérifier si Lat/Lon existent
+          if (row.Latitude && row.Longitude) {
+            
+            // Récupérer la couleur selon la colonne 'Statut'
+            // Assurez-vous que le nom de la colonne correspond dans Grist
+            var statut = row.Statut || 'Inconnu'; 
+            var color = getColor(statut);
+
+            // Créer le point (Cercle)
+            var marker = L.circleMarker([row.Latitude, row.Longitude], {
+              radius: 8,              // Taille du point
+              fillColor: color,       // Couleur de remplissage
+              color: "#000",          // Couleur du bord
+              weight: 1,              // Épaisseur du bord
+              opacity: 1,
+              fillOpacity: 0.8
+            });
+
+            // Ajouter une info-bulle au clic
+            marker.bindPopup(`<b>${row.Nom}</b><br>Statut: ${statut}`);
+            
+            // Ajouter à la carte
+            markersLayer.addLayer(marker);
+          }
+        });
+      });
+    } else {
+      console.log("Mode test : Grist non détecté (la carte s'affiche mais sans données).");
+    }
+  </script>
+</body>
+</html>
