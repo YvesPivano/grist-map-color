@@ -6,22 +6,24 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body { margin: 0; padding: 0; }
-    #map { height: 100vh; width: 100%; }
+    #map { height: 100vh; width: 100%; display: block; }
+    html, body { height: 100%; overflow: hidden; }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <!-- Script Leaflet pour la carte -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Script Grist Officiel (CDN stable) -->
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
   
   <script>
     // --- 1. Initialisation de la carte ---
     var map = L.map('map').setView([46.603354, 1.888334], 6);
+    
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
+      attribution: '© OpenStreetMap',
+      maxZoom: 19
     }).addTo(map);
+    
     var markersLayer = L.layerGroup().addTo(map);
 
     // --- 2. Fonction de couleur ---
@@ -36,7 +38,6 @@
 
     // --- 3. Connexion à Grist ---
     if (typeof grist !== 'undefined') {
-      // On déclare les colonnes attendues
       grist.ready({
         columns: [
           { name: 'Latitude', type: 'Any' },
@@ -47,11 +48,10 @@
         allowMultipleSelection: false
       });
 
-      // On écoute les données
-            grist.onRecords((records) => {
+      grist.onRecords((records) => {
+        console.log("Données reçues :", records.length);
         markersLayer.clearLayers();
         
-        // Créer un groupe de limites (bounds) vide
         var bounds = [];
 
         records.forEach(row => {
@@ -70,19 +70,22 @@
             marker.bindPopup(`<b>${row.Nom}</b><br>Statut: ${statut}`);
             markersLayer.addLayer(marker);
             
-            // Ajouter la position aux limites pour le zoom auto
             bounds.push([row.Latitude, row.Longitude]);
           }
         });
 
-        // Ajuster le zoom pour voir tous les points
         if (bounds.length > 0) {
-          map.fitBounds(bounds);
-        } else {
-          // Si pas de données, revenir à la vue par défaut
-          map.setView([46.603354, 1.888334], 6);
+          map.fitBounds(bounds, { padding: [50, 50] });
         }
       });
+      
+      // Important : invalider la taille de la carte quand le widget est redimensionné
+      grist.on('message', (msg) => {
+        if (msg.type === 'resize') {
+          setTimeout(() => map.invalidateSize(), 100);
+        }
+      });
+    }
   </script>
 </body>
 </html>
