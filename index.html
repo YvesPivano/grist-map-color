@@ -46,7 +46,15 @@
     // --- CONNEXION A GRIST ---
     // Indique à Grist que le widget est prêt
     if (typeof grist !== 'undefined') {
-      grist.ready();
+      grist.ready({
+  columns: [
+    { name: 'Latitude', type: 'Number' },
+    { name: 'Longitude', type: 'Number' },
+    { name: 'Statut', type: 'Text' },
+    { name: 'Nom', type: 'Text' }
+  ],
+  allowMultipleSelection: false
+});
 
       // Écoute les changements de données dans la table liée
       grist.onRecords((records) => {
