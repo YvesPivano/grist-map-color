@@ -28,13 +28,12 @@
     var markersById = {}; 
     var currentSelectedId = null;
 
-    // --- 2. Fonction de couleur (Adaptée pour Booléen) ---
+    // --- 2. Fonction de couleur ---
     function getColor(dispositif, isSelected) {
-      // true = Vert, false = Rouge (à personnaliser)
       if (dispositif === true) {
-        return '#2ecc71'; // Vert (Actif/Présent)
+        return '#2ecc71'; // Vert
       } else {
-        return '#f1c40f'; // Jaune (Inactif/Absent)
+        return '#f1c40f'; // Jaune
       }
     }
 
@@ -44,15 +43,17 @@
         columns: [
           { name: 'Latitude', type: 'Any' },
           { name: 'Longitude', type: 'Any' },
-          { name: 'Dispositif', type: 'Any' },  // Changé de Statut à Dispositif
-          { name: 'Nom', type: 'Any' }
+          { name: 'Dispositif', type: 'Any' },
+          { name: 'Nom', type: 'Any' }  // Vérifiez que ce nom correspond à Grist
         ],
         allowMultipleSelection: false
       });
 
-      // A. Gestion des données
       grist.onRecords((records) => {
         console.log("Données reçues :", records.length);
+        // Debug : afficher la première ligne pour voir les noms de colonnes réels
+        if(records.length > 0) console.log("Exemple de donnée :", records[0]);
+        
         markersLayer.clearLayers();
         markersById = {};
         
@@ -63,6 +64,9 @@
             var dispositif = row.Dispositif || false;
             var color = getColor(dispositif, false);
             
+            // Sécurité : si row.Nom est vide, afficher "Point"
+            var label = row.Nom || "Point"; 
+
             var marker = L.circleMarker([row.Latitude, row.Longitude], {
               radius: row.id === currentSelectedId ? 12 : 8,
               fillColor: color,
@@ -72,9 +76,7 @@
               fillOpacity: row.id === currentSelectedId ? 1 : 0.8
             });
             
-            // Affichage dans la popup (Vrai/Faux ou Actif/Inactif)
-            var statutText = dispositif === true ? 'Actif' : 'Inactif';
-            marker.bindPopup(`<b>${row.Nom}</b><br>Dispositif: ${statutText}`);
+            marker.bindPopup(`<b>${label}</b><br>Dispositif: ${dispositif === true ? 'Actif' : 'Inactif'}`);
             markersLayer.addLayer(marker);
             
             markersById[row.id] = marker;
@@ -87,33 +89,22 @@
         }
       });
 
-      // B. Gestion de la sélection
+      // Gestion de la sélection
       grist.onRecord((record) => {
-        console.log("Enregistrement sélectionné :", record);
-        
         if (currentSelectedId && markersById[currentSelectedId]) {
           var oldMarker = markersById[currentSelectedId];
-          oldMarker.setStyle({
-            radius: 8,
-            weight: 1,
-            fillOpacity: 0.8
-          });
+          oldMarker.setStyle({ radius: 8, weight: 1, fillOpacity: 0.8 });
         }
         
         currentSelectedId = record.id;
         
         if (currentSelectedId && markersById[currentSelectedId]) {
           var newMarker = markersById[currentSelectedId];
-          newMarker.setStyle({
-            radius: 12,
-            weight: 3,
-            fillOpacity: 1
-          });
+          newMarker.setStyle({ radius: 12, weight: 3, fillOpacity: 1 });
           newMarker.openPopup();
         }
       });
       
-      // Gestion du redimensionnement
       grist.on('message', (msg) => {
         if (msg.type === 'resize') {
           setTimeout(() => map.invalidateSize(), 100);
