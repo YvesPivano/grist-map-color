@@ -25,22 +25,17 @@
     }).addTo(map);
     
     var markersLayer = L.layerGroup().addTo(map);
-    
-    // === NOUVEAU : Stocker les marqueurs pour y accéder plus tard ===
     var markersById = {}; 
     var currentSelectedId = null;
 
-    // --- 2. Fonction de couleur ---
-    function getColor(statut, isSelected) {
-      // Si le point est sélectionné, on le met en évidence (bordure épaisse)
-      var baseColor;
-      switch (statut) {
-        case 'Validé': baseColor = '#2ecc71'; break;
-        case 'En cours': baseColor = '#f1c40f'; break;
-        case 'Problème': baseColor = '#e74c3c'; break;
-        default: baseColor = '#3498db';
+    // --- 2. Fonction de couleur (Adaptée pour Booléen) ---
+    function getColor(dispositif, isSelected) {
+      // true = Vert, false = Rouge (à personnaliser)
+      if (dispositif === true) {
+        return '#2ecc71'; // Vert (Actif/Présent)
+      } else {
+        return '#f1c40f'; // Jaune (Inactif/Absent)
       }
-      return baseColor;
     }
 
     // --- 3. Connexion à Grist ---
@@ -49,40 +44,40 @@
         columns: [
           { name: 'Latitude', type: 'Any' },
           { name: 'Longitude', type: 'Any' },
-          { name: 'Statut', type: 'Any' },
+          { name: 'Dispositif', type: 'Any' },  // Changé de Statut à Dispositif
           { name: 'Nom', type: 'Any' }
         ],
         allowMultipleSelection: false
       });
 
-      // A. Gestion des données (affichage des points)
+      // A. Gestion des données
       grist.onRecords((records) => {
         console.log("Données reçues :", records.length);
         markersLayer.clearLayers();
-        markersById = {}; // Reset du stock
+        markersById = {};
         
         var bounds = [];
 
         records.forEach(row => {
           if (row.Latitude && row.Longitude) {
-            var statut = row.Statut || 'Inconnu';
-            var color = getColor(statut, false);
+            var dispositif = row.Dispositif || false;
+            var color = getColor(dispositif, false);
             
             var marker = L.circleMarker([row.Latitude, row.Longitude], {
-              radius: row.id === currentSelectedId ? 12 : 8, // Plus gros si sélectionné
+              radius: row.id === currentSelectedId ? 12 : 8,
               fillColor: color,
-              color: row.id === currentSelectedId ? "#000" : "#000",
-              weight: row.id === currentSelectedId ? 3 : 1, // Bordure épaisse si sélectionné
+              color: "#000",
+              weight: row.id === currentSelectedId ? 3 : 1,
               opacity: 1,
               fillOpacity: row.id === currentSelectedId ? 1 : 0.8
             });
             
-            marker.bindPopup(`<b>${row.Nom}</b><br>Statut: ${statut}`);
+            // Affichage dans la popup (Vrai/Faux ou Actif/Inactif)
+            var statutText = dispositif === true ? 'Actif' : 'Inactif';
+            marker.bindPopup(`<b>${row.Nom}</b><br>Dispositif: ${statutText}`);
             markersLayer.addLayer(marker);
             
-            // === NOUVEAU : Stocker le marqueur avec l'ID Grist ===
             markersById[row.id] = marker;
-            
             bounds.push([row.Latitude, row.Longitude]);
           }
         });
@@ -92,11 +87,10 @@
         }
       });
 
-      // === NOUVEAU : B. Gestion de la sélection (clic dans la table) ===
+      // B. Gestion de la sélection
       grist.onRecord((record) => {
         console.log("Enregistrement sélectionné :", record);
         
-        // 1. Réinitialiser l'apparence de l'ancien point sélectionné
         if (currentSelectedId && markersById[currentSelectedId]) {
           var oldMarker = markersById[currentSelectedId];
           oldMarker.setStyle({
@@ -106,10 +100,8 @@
           });
         }
         
-        // 2. Mettre à jour le nouvel ID sélectionné
         currentSelectedId = record.id;
         
-        // 3. Mettre en surbrillance le nouveau point
         if (currentSelectedId && markersById[currentSelectedId]) {
           var newMarker = markersById[currentSelectedId];
           newMarker.setStyle({
@@ -117,12 +109,7 @@
             weight: 3,
             fillOpacity: 1
           });
-          
-          // Optionnel : Ouvrir la popup automatiquement
           newMarker.openPopup();
-          
-          // Optionnel : Centrer la carte sur le point
-          // map.panTo(newMarker.getLatLng());
         }
       });
       
