@@ -48,10 +48,12 @@
       });
 
       // On écoute les données
-      grist.onRecords((records) => {
-        console.log("Données reçues :", records.length); // Pour déboguer
+            grist.onRecords((records) => {
         markersLayer.clearLayers();
         
+        // Créer un groupe de limites (bounds) vide
+        var bounds = [];
+
         records.forEach(row => {
           if (row.Latitude && row.Longitude) {
             var statut = row.Statut || 'Inconnu';
@@ -67,12 +69,20 @@
             });
             marker.bindPopup(`<b>${row.Nom}</b><br>Statut: ${statut}`);
             markersLayer.addLayer(marker);
+            
+            // Ajouter la position aux limites pour le zoom auto
+            bounds.push([row.Latitude, row.Longitude]);
           }
         });
+
+        // Ajuster le zoom pour voir tous les points
+        if (bounds.length > 0) {
+          map.fitBounds(bounds);
+        } else {
+          // Si pas de données, revenir à la vue par défaut
+          map.setView([46.603354, 1.888334], 6);
+        }
       });
-    } else {
-      console.error("L'API Grist n'a pas été chargée.");
-    }
   </script>
 </body>
 </html>
