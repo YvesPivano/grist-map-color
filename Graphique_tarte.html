@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Camembert Grist</title>
+  <title>Camembert Effectifs Grist</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { margin: 0; padding: 20px; font-family: Arial; }
@@ -19,11 +19,12 @@
     let chart;
 
     if (typeof grist !== 'undefined') {
+      // 1. DÉCLARATION EXACTE DES COLONNES
       grist.ready({
         columns: [
           { name: 'Nom', type: 'Any' },
           { name: 'Dispositif', type: 'Any' },
-          { name: 'Effectifs', type: 'Any' }
+          { name: 'Effectifs', type: 'Number' }  // ← Doit correspondre exactement
         ],
         allowMultipleSelection: false
       });
@@ -31,28 +32,26 @@
       grist.onRecords((records) => {
         const ctx = document.getElementById('pieChart').getContext('2d');
         
-        // Compter les dispositifs actifs et inactifs
-        let actifCount = 0;
-        let inactifCount = 0;
         let actifValue = 0;
         let inactifValue = 0;
 
         records.forEach(row => {
+          // 2. UTILISATION EXACTE DE LA COLONNE
+          // Si Effectifs est vide, on utilise 1 par sécurité
+          const effectif = row.Effectifs || 1;
+          
           if (row.Dispositif === true) {
-            actifCount++;
-            actifValue += row.Effectifs || 1;
+            actifValue += effectif;
           } else {
-            inactifCount++;
-            inactifValue += row.Effectifs || 1;
+            inactifValue += effectif;
           }
         });
 
-        // Détruire l'ancien graphique s'il existe
         if (chart) {
           chart.destroy();
         }
 
-        // Créer le nouveau graphique
+        // 3. CRÉATION DU GRAPHIQUE
         chart = new Chart(ctx, {
           type: 'pie',
           data: {
@@ -63,10 +62,7 @@
                 '#2ecc71', // Vert
                 '#f1c40f'  // Jaune
               ],
-              borderColor: [
-                '#ffffff',
-                '#ffffff'
-              ],
+              borderColor: ['#ffffff', '#ffffff'],
               borderWidth: 2
             }]
           },
@@ -78,9 +74,7 @@
                 position: 'bottom',
                 labels: {
                   padding: 15,
-                  font: {
-                    size: 12
-                  }
+                  font: { size: 12 }
                 }
               },
               tooltip: {
@@ -88,9 +82,9 @@
                   label: function(context) {
                     let label = context.label || '';
                     let value = context.parsed || 0;
-                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
-                    let percentage = ((value / total) * 100).toFixed(1);
-                    return label + ': ' + value + ' (' + percentage + '%)';
+                    let total = actifValue + inactifValue;
+                    let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                    return `${label}: ${value} personnes (${percentage}%)`;
                   }
                 }
               }
