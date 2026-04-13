@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Camembert Grist</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { margin: 0; padding: 20px; font-family: Arial; }
+    #chart-container { position: relative; height: 400px; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="chart-container">
+    <canvas id="pieChart"></canvas>
+  </div>
+
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <script>
+    let chart;
+
+    if (typeof grist !== 'undefined') {
+      grist.ready({
+        columns: [
+          { name: 'Nom', type: 'Any' },
+          { name: 'Dispositif', type: 'Any' },
+          { name: 'Valeur', type: 'Number' }
+        ],
+        allowMultipleSelection: false
+      });
+
+      grist.onRecords((records) => {
+        const ctx = document.getElementById('pieChart').getContext('2d');
+        
+        // Compter les dispositifs actifs et inactifs
+        let actifCount = 0;
+        let inactifCount = 0;
+        let actifValue = 0;
+        let inactifValue = 0;
+
+        records.forEach(row => {
+          if (row.Dispositif === true) {
+            actifCount++;
+            actifValue += row.Valeur || 1;
+          } else {
+            inactifCount++;
+            inactifValue += row.Valeur || 1;
+          }
+        });
+
+        // Détruire l'ancien graphique s'il existe
+        if (chart) {
+          chart.destroy();
+        }
+
+        // Créer le nouveau graphique
+        chart = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: ['Dispositif', 'Hors dispositif'],
+            datasets: [{
+              data: [actifValue, inactifValue],
+              backgroundColor: [
+                '#2ecc71', // Vert
+                '#f1c40f'  // Jaune
+              ],
+              borderColor: [
+                '#ffffff',
+                '#ffffff'
+              ],
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  padding: 15,
+                  font: {
+                    size: 12
+                  }
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    let label = context.label || '';
+                    let value = context.parsed || 0;
+                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                    let percentage = ((value / total) * 100).toFixed(1);
+                    return label + ': ' + value + ' (' + percentage + '%)';
+                  }
+                }
+              }
+            }
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html>
