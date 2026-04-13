@@ -76,7 +76,7 @@
               fillOpacity: row.id === currentSelectedId ? 1 : 0.8
             });
             
-            marker.bindPopup(`<b>${label}</b><br>Dispositif: ${dispositif === true ? 'Actif' : 'Inactif'}`);
+            marker.bindPopup(`<b>${label}</b><br>${dispositif === true ? 'Dispositif' : 'Hors dispositif'}`);
             markersLayer.addLayer(marker);
             
             markersById[row.id] = marker;
