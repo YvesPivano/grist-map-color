@@ -23,7 +23,7 @@
         columns: [
           { name: 'Nom', type: 'Any' },
           { name: 'Dispositif', type: 'Any' },
-          { name: 'Effectifs', type: 'Number' }
+          { name: 'Effectifs', type: 'Any' }
         ],
         allowMultipleSelection: false
       });
@@ -40,10 +40,10 @@
         records.forEach(row => {
           if (row.Dispositif === true) {
             actifCount++;
-            actifValue += row.Valeur || 1;
+            actifValue += row.Effectifs || 1;
           } else {
             inactifCount++;
-            inactifValue += row.Valeur || 1;
+            inactifValue += row.Effectifs || 1;
           }
         });
 
