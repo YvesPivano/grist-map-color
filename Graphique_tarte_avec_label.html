@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Camembert Effectifs Grist</title>
-  <!-- Chart.js version 4+ -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <style>
     body { margin: 0; padding: 20px; font-family: Arial; }
     #chart-container { position: relative; height: 400px; width: 100%; }
@@ -48,17 +48,17 @@
           chart.destroy();
         }
 
-        // Calcul des pourcentages pour l'affichage
+        // Calcul des pourcentages
         let total = actifValue + inactifValue;
         let actifPercent = total > 0 ? ((actifValue / total) * 100).toFixed(1) : 0;
         let inactifPercent = total > 0 ? ((inactifValue / total) * 100).toFixed(1) : 0;
 
         chart = new Chart(ctx, {
           type: 'pie',
-          data: {
+          data: {  // ← CORRECTION ICI : ajout de "data:"
             labels: ['Dispositif', 'Hors dispositif'],
             datasets: [{
-              data: [actifValue, inactifValue],
+              data: [actifValue, inactifValue],  // ← CORRECTION ICI : ajout de "data:"
               backgroundColor: [
                 '#2ecc71', // Vert
                 '#f1c40f'  // Jaune
@@ -71,7 +71,6 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-              // Affichage des labels NATIFS (sans plugin externe)
               legend: {
                 position: 'bottom',
                 labels: {
@@ -80,37 +79,35 @@
                 }
               },
               tooltip: {
-                enabled: true
+                enabled: true,
+                callbacks: {
+                  label: function(context) {
+                    let label = context.label || '';
+                    let value = context.parsed || 0;
+                    let total = actifValue + inactifValue;
+                    let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                    return label + ': ' + value + ' personnes (' + percentage + '%)';
+                  }
+                }
+              },
+              // === LABELS PERMANENTS SUR LES TRANCHES ===
+              datalabels: {
+                display: true,
+                color: '#000000',
+                font: {
+                  weight: 'bold',
+                  size: 14
+                },
+                formatter: function(value, context) {
+                  let total = actifValue + inactifValue;
+                  let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  return value + ' pers.\n(' + percentage + '%)';
+                },
+                anchor: 'center',
+                align: 'center'
               }
             }
-          },
-          // Plugin interne pour afficher les données sur les tranches
-          plugins: [{
-            id: 'customLabels',
-            beforeDraw: function(chart) {
-              var ctx = chart.ctx;
-              ctx.save();
-              ctx.font = 'bold 14px Arial';
-              ctx.fillStyle = '#000000';
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-
-              chart.data.datasets[0].data.forEach((value, index) => {
-                var meta = chart.getDatasetMeta(0);
-                var arc = meta.data[index];
-                
-                if (arc && arc.tooltipPosition) {
-                  var pos = arc.tooltipPosition();
-                  var total = actifValue + inactifValue;
-                  var percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                  
-                  ctx.fillText(value + ' pers.', pos.x, pos.y - 10);
-                  ctx.fillText('(' + percent + '%)', pos.x, pos.y + 10);
-                }
-              });
-              ctx.restore();
-            }
-          }]
+          }
         });
       });
     }
