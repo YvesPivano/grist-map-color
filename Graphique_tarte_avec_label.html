@@ -85,10 +85,12 @@
             size: 14
       },
       formatter: function(value, context) {
-        let total = actifValue + inactifValue;
-        let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-        return context.chart.data.labels[context.dataIndex] + '\n' + percentage + '%';
-      }
+  let total = actifValue + inactifValue;
+  let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+  let label = context.chart.data.labels[context.dataIndex];
+
+  return label + '\n' + value + ' élèves\n' + percentage + '%';
+}
     },
               tooltip: {
                 callbacks: {
