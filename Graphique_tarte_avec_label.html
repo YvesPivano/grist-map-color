@@ -18,13 +18,14 @@
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
   <script>
     let chart;
-
+    Chart.register(ChartDataLabels);
     if (typeof grist !== 'undefined') {
+      // 1. DÉCLARATION EXACTE DES COLONNES
       grist.ready({
         columns: [
           { name: 'Nom', type: 'Any' },
           { name: 'Dispositif', type: 'Any' },
-          { name: 'Effectifs', type: 'Number' }
+          { name: 'Effectifs', type: 'Any' }  // ← Doit correspondre exactement
         ],
         allowMultipleSelection: false
       });
@@ -36,7 +37,10 @@
         let inactifValue = 0;
 
         records.forEach(row => {
+          // 2. UTILISATION EXACTE DE LA COLONNE
+          // Si Effectifs est vide, on utilise 1 par sécurité
           const effectif = row.Effectifs || 1;
+          
           if (row.Dispositif === true) {
             actifValue += effectif;
           } else {
@@ -47,18 +51,18 @@
         if (chart) {
           chart.destroy();
         }
-
-        let total = actifValue + inactifValue;
-        let actifPercent = total > 0 ? ((actifValue / total) * 100).toFixed(1) : 0;
-        let inactifPercent = total > 0 ? ((inactifValue / total) * 100).toFixed(1) : 0;
-
+        
+        // 3. CRÉATION DU GRAPHIQUE
         chart = new Chart(ctx, {
           type: 'pie',
           data: {
             labels: ['Dispositif', 'Hors dispositif'],
             datasets: [{
               data: [actifValue, inactifValue],
-              backgroundColor: ['#2ecc71', '#f1c40f'],
+              backgroundColor: [
+                '#2ecc71', // Vert
+                '#f1c40f'  // Jaune
+              ],
               borderColor: ['#ffffff', '#ffffff'],
               borderWidth: 2
             }]
@@ -69,29 +73,33 @@
             plugins: {
               legend: {
                 position: 'bottom',
-                labels: { padding: 15, font: { size: 12 } }
+                labels: {
+                  padding: 15,
+                  font: { size: 12 }
+                }
               },
+          datalabels: {
+            color: '#ffffff',
+            font: {
+            weight: 'bold',
+            size: 14
+      },
+      formatter: function(value, context) {
+        let total = actifValue + inactifValue;
+        let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+        return context.chart.data.labels[context.dataIndex] + '\n' + percentage + '%';
+      }
+    },
               tooltip: {
-                enabled: true,
                 callbacks: {
                   label: function(context) {
                     let label = context.label || '';
                     let value = context.parsed || 0;
+                    let total = actifValue + inactifValue;
                     let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                    return label + ': ' + value + ' personnes (' + percentage + '%)';
+                    return `${label}: ${value} élèves (${percentage}%)`;
                   }
                 }
-              },
-              datalabels: {
-                display: true,
-                color: '#000000',
-                font: { weight: 'bold', size: 14 },
-                formatter: function(value) {
-                  let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                  return value + ' pers.\n(' + percentage + '%)';
-                },
-                anchor: 'center',
-                align: 'center'
               }
             }
           }
