@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Camembert Effectifs Grist</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Plugin pour afficher les labels sur le graphique -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <style>
+    body { margin: 0; padding: 20px; font-family: Arial; }
+    #chart-container { position: relative; height: 400px; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="chart-container">
+    <canvas id="pieChart"></canvas>
+  </div>
+
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <script>
+    // Enregistrer le plugin DataLabels
+    Chart.register(ChartDataLabels);
+    
+    let chart;
+
+    if (typeof grist !== 'undefined') {
+      grist.ready({
+        columns: [
+          { name: 'Nom', type: 'Any' },
+          { name: 'Dispositif', type: 'Any' },
+          { name: 'Effectifs', type: 'Number' }
+        ],
+        allowMultipleSelection: false
+      });
+
+      grist.onRecords((records) => {
+        const ctx = document.getElementById('pieChart').getContext('2d');
+        
+        let actifValue = 0;
+        let inactifValue = 0;
+
+        records.forEach(row => {
+          const effectif = row.Effectifs || 1;
+          if (row.Dispositif === true) {
+            actifValue += effectif;
+          } else {
+            inactifValue += effectif;
+          }
+        });
+
+        if (chart) {
+          chart.destroy();
+        }
+
+        chart = new Chart(ctx, {
+          type: 'pie',
+           {
+            labels: ['Dispositif', 'Hors dispositif'],
+            datasets: [{
+               [actifValue, inactifValue],
+              backgroundColor: [
+                '#2ecc71', // Vert
+                '#f1c40f'  // Jaune
+              ],
+              borderColor: ['#ffffff', '#ffffff'],
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              // === LABELS AFFICHÉS SUR LES TRANCHES ===
+              datalabels: {
+                display: true,
+                color: '#000000',        // Couleur du texte
+                font: {
+                  weight: 'bold',        // Texte en gras
+                  size: 14               // Taille de police
+                },
+                formatter: (value, context) => {
+                  // Calcul du pourcentage
+                  let total = actifValue + inactifValue;
+                  let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  // Format : "38 personnes\n(65.5%)"
+                  return value + ' pers.\n(' + percentage + '%)';
+                },
+                // Positionnement du texte
+                anchor: 'center',
+                align: 'center',
+                // Éviter que le texte ne dépasse
+                clamp: true
+              },
+              // Légende en bas
+              legend: {
+                position: 'bottom',
+                labels: {
+                  padding: 15,
+                  font: { size: 12 }
+                }
+              },
+              // Info-bulle au survol (optionnel)
+              tooltip: {
+                enabled: true
+              }
+            }
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html>
