@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <title>Camembert Effectifs Grist</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Plugin pour afficher les labels sur le graphique -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <style>
     body { margin: 0; padding: 20px; font-family: Arial; }
     #chart-container { position: relative; height: 400px; width: 100%; }
@@ -16,15 +18,17 @@
 
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
   <script>
+    // Enregistrer le plugin DataLabels
+    Chart.register(ChartDataLabels);
+    
     let chart;
 
     if (typeof grist !== 'undefined') {
-      // 1. DÉCLARATION EXACTE DES COLONNES
       grist.ready({
         columns: [
           { name: 'Nom', type: 'Any' },
           { name: 'Dispositif', type: 'Any' },
-          { name: 'Effectifs', type: 'Any' }  // ← Doit correspondre exactement
+          { name: 'Effectifs', type: 'Number' }
         ],
         allowMultipleSelection: false
       });
@@ -36,10 +40,7 @@
         let inactifValue = 0;
 
         records.forEach(row => {
-          // 2. UTILISATION EXACTE DE LA COLONNE
-          // Si Effectifs est vide, on utilise 1 par sécurité
           const effectif = row.Effectifs || 1;
-          
           if (row.Dispositif === true) {
             actifValue += effectif;
           } else {
@@ -51,13 +52,12 @@
           chart.destroy();
         }
 
-        // 3. CRÉATION DU GRAPHIQUE
         chart = new Chart(ctx, {
           type: 'pie',
-          data: {
+           {
             labels: ['Dispositif', 'Hors dispositif'],
             datasets: [{
-              data: [actifValue, inactifValue],
+               [actifValue, inactifValue],
               backgroundColor: [
                 '#2ecc71', // Vert
                 '#f1c40f'  // Jaune
@@ -70,6 +70,28 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
+              // === LABELS AFFICHÉS SUR LES TRANCHES ===
+              datalabels: {
+                display: true,
+                color: '#000000',        // Couleur du texte
+                font: {
+                  weight: 'bold',        // Texte en gras
+                  size: 14               // Taille de police
+                },
+                formatter: (value, context) => {
+                  // Calcul du pourcentage
+                  let total = actifValue + inactifValue;
+                  let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  // Format : "38 personnes\n(65.5%)"
+                  return value + ' pers.\n(' + percentage + '%)';
+                },
+                // Positionnement du texte
+                anchor: 'center',
+                align: 'center',
+                // Éviter que le texte ne dépasse
+                clamp: true
+              },
+              // Légende en bas
               legend: {
                 position: 'bottom',
                 labels: {
@@ -77,16 +99,9 @@
                   font: { size: 12 }
                 }
               },
+              // Info-bulle au survol (optionnel)
               tooltip: {
-                callbacks: {
-                  label: function(context) {
-                    let label = context.label || '';
-                    let value = context.parsed || 0;
-                    let total = actifValue + inactifValue;
-                    let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                    return `${label}: ${value} personnes (${percentage}%)`;
-                  }
-                }
+                enabled: true
               }
             }
           }
