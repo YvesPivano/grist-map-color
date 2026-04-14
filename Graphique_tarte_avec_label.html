@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>Camembert Effectifs Grist</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <style>
     body { margin: 0; padding: 20px; font-family: Arial; }
     #chart-container { position: relative; height: 400px; width: 100%; }
@@ -17,6 +16,35 @@
 
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
   <script>
+    // === PLUGIN PERSONNALISÉ POUR LES LABELS ===
+    const customLabelsPlugin = {
+      id: 'customLabels',
+      afterDraw: function(chart) {
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.font = 'bold 14px Arial';
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+        
+        chart.getDatasetMeta(0).data.forEach((arc, index) => {
+          const value = chart.data.datasets[0].data[index];
+          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+          
+          // Position du label au centre de la tranche
+          const position = arc.tooltipPosition();
+          
+          // Dessiner le texte
+          ctx.fillText(value + ' pers.', position.x, position.y - 10);
+          ctx.fillText('(' + percentage + '%)', position.x, position.y + 10);
+        });
+        
+        ctx.restore();
+      }
+    };
+
     let chart;
 
     if (typeof grist !== 'undefined') {
@@ -48,17 +76,12 @@
           chart.destroy();
         }
 
-        // Calcul des pourcentages
-        let total = actifValue + inactifValue;
-        let actifPercent = total > 0 ? ((actifValue / total) * 100).toFixed(1) : 0;
-        let inactifPercent = total > 0 ? ((inactifValue / total) * 100).toFixed(1) : 0;
-
         chart = new Chart(ctx, {
           type: 'pie',
-          data: {  // ← CORRECTION ICI : ajout de "data:"
+           {
             labels: ['Dispositif', 'Hors dispositif'],
             datasets: [{
-              data: [actifValue, inactifValue],  // ← CORRECTION ICI : ajout de "data:"
+               [actifValue, inactifValue],
               backgroundColor: [
                 '#2ecc71', // Vert
                 '#f1c40f'  // Jaune
@@ -86,28 +109,14 @@
                     let value = context.parsed || 0;
                     let total = actifValue + inactifValue;
                     let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                    return label + ': ' + value + ' personnes (' + percentage + '%)';
+                    return label + ': ' + value + ' élèves (' + percentage + '%)';
                   }
                 }
-              },
-              // === LABELS PERMANENTS SUR LES TRANCHES ===
-              datalabels: {
-                display: true,
-                color: '#000000',
-                font: {
-                  weight: 'bold',
-                  size: 14
-                },
-                formatter: function(value, context) {
-                  let total = actifValue + inactifValue;
-                  let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                  return value + ' pers.\n(' + percentage + '%)';
-                },
-                anchor: 'center',
-                align: 'center'
               }
             }
-          }
+          },
+          // === ENREGISTREMENT DU PLUGIN PERSONNALISÉ ===
+          plugins: [customLabelsPlugin]
         });
       });
     }
